@@ -1,50 +1,82 @@
-# Welcome to your Expo app 👋
+# Talanta
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**AI-powered sports video analysis to help scouts discover grassroots football talent in Kenya.**
 
-## Get started
+Players upload short highlight clips from their phone. Talanta analyses each clip on the device with Google MediaPipe pose estimation, turns the movement into an objective performance rating, and makes the player searchable by scouts, who can shortlist players, send trial invitations, and message them directly.
 
-1. Install dependencies
+Built as a final-year BSc Computer Science project at UMMA University.
 
-   ```bash
-   npm install
-   ```
+<p align="center">
+  <img src="docs/screenshots/welcome.png" width="200" alt="Welcome screen">
+  <img src="docs/screenshots/upload.png" width="200" alt="Upload a highlight video">
+  <img src="docs/screenshots/ai-report.png" width="200" alt="AI analysis report">
+  <img src="docs/screenshots/admin.png" width="200" alt="Admin dashboard">
+</p>
 
-2. Start the app
+## Features
 
-   ```bash
-   npx expo start
-   ```
+**Players**
+- Register with a 6-digit email verification code
+- Upload highlight videos from the gallery or camera, with automatic compression to 720p and live upload progress
+- Trim a clip to the section the AI should analyse
+- Full-screen video player with seeking, playback speed and landscape mode
+- AI report with six metrics (sprint speed, agility, work rate, vertical leap, balance, body symmetry), an overall rating and a detection confidence
+- Respond to trial invitations and message scouts
 
-In the output, you'll find options to open the app in a
+**Scouts**
+- Search and filter players by position, county and AI rating
+- View player profiles and AI scouting reports
+- Shortlist players and send trial invitations
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+**Administrator**
+- Platform totals, engagement figures and AI system performance
+- Printable system report
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## How the AI works
 
-## Get a fresh project
+1. The clip is downloaded once and sampled at 5 frames per second inside the selected section (24–72 frames).
+2. Each frame is resized to 480 px and passed to **MediaPipe Pose Landmarker**, which detects 33 body landmarks.
+3. The landmark movement is converted into six scores, a weighted overall rating, and approximate distance, top speed and jump height.
+4. Analysis runs on the phone in a background WebView, so it continues while the user moves between screens and needs no paid AI server.
 
-When you're ready, run:
+Analysing a 19-second clip took 135.8 s with the first version of the engine, and 27.2 s after optimisation (12.3 s on a repeat run).
 
-```bash
-npm run reset-project
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Mobile app | React Native 0.81, Expo SDK 54, Expo Router, TypeScript |
+| AI | Google MediaPipe Pose Landmarker (tasks-vision) in a WebView |
+| Backend | Supabase: Auth, PostgreSQL with Row Level Security, Storage |
+| Video | expo-image-picker, react-native-compressor, expo-video, expo-video-thumbnails |
+| Builds | EAS Build (Android APK) |
+
+## Project structure
+
+```
+app/          Screens (file-based routing with Expo Router)
+components/   Reusable UI and video components (player, trim editor, cards, skeletons)
+lib/          Supabase client, upload pipeline, AI engine, error handling
+supabase/     Database migrations (schema changes and security policies)
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Getting started
 
-## Learn more
+```bash
+npm install
+npx expo start
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+The app connects to a Supabase project configured in `lib/supabase.ts`. To build an installable Android APK:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```bash
+npx eas-cli build -p android --profile preview
+```
 
-## Join the community
+## Security
 
-Join our community of developers creating universal apps.
+Every table uses Supabase Row Level Security: users can read and change only their own data, messages are visible only to the sender and receiver, and administrators are verified against the `admins` table. The policies are in [`supabase/migrations`](supabase/migrations).
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Author
+
+**Abdul Isaak Bika** · BSc Computer Science, UMMA University, Kenya
