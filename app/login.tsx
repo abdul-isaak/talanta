@@ -38,7 +38,7 @@ export default function LoginScreen() {
       const cleanEmail = email.trim().toLowerCase()
       const cleanPassword = password.trim()
 
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password: cleanPassword,
       })
@@ -54,11 +54,33 @@ export default function LoginScreen() {
         return
       }
 
-      if (role === 'player') {
-        router.replace('/player-dashboard' as any)
-      } else {
-        router.replace('/scout-dashboard' as any)
+      // The tab is only a hint: route by the profile this account actually has,
+      // so a scout signing in on the Player tab never lands in an empty player account.
+      const userId = data.user?.id
+      const [playerRes, scoutRes] = await Promise.all([
+        supabase.from('player_profiles').select('id').eq('user_id', userId).maybeSingle(),
+        supabase.from('scout_profiles').select('id').eq('user_id', userId).maybeSingle(),
+      ])
+      const actualRole = playerRes.data ? 'player' : scoutRes.data ? 'scout' : null
+
+      if (!actualRole) {
+        await supabase.auth.signOut()
+        Alert.alert(
+          'No profile found',
+          'This account is not registered as a player or a scout. Administrators should use the Administrator login.'
+        )
+        return
       }
+
+      if (actualRole !== role) {
+        setRole(actualRole)
+        Alert.alert(
+          actualRole === 'scout' ? 'Scout account' : 'Player account',
+          `This email is registered as a ${actualRole}, so you have been signed in to your ${actualRole} account.`
+        )
+      }
+
+      router.replace(actualRole === 'player' ? '/player-dashboard' as any : '/scout-dashboard' as any)
 
     } catch (err) {
       console.log('CATCH ERROR:', err)

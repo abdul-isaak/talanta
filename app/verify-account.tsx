@@ -138,19 +138,27 @@ export default function VerifyAccountScreen() {
       return;
     }
 
+    // Use the profile the account really has (the login tab may not match it).
+    const { data: sess } = await supabase.auth.getSession();
+    const uid = sess.session?.user?.id;
+    const { data: scoutRow } = uid
+      ? await supabase.from('scout_profiles').select('id').eq('user_id', uid).maybeSingle()
+      : { data: null };
+    const actualRole = scoutRow ? 'scout' : uid ? 'player' : role === 'scout' ? 'scout' : 'player';
+
     // Flag the profile as verified
-    const table = role === 'scout' ? 'scout_profiles' : 'player_profiles';
+    const table = actualRole === 'scout' ? 'scout_profiles' : 'player_profiles';
     await supabase.from(table).update({ is_verified: true }).eq('email', email);
 
     await logActivity('register', 'Account verified via emailed code', {
-      userId: userId as string,
+      userId: (uid ?? userId) as string,
       email: email as string,
-      role: role as string,
+      role: actualRole,
     });
 
     // verifyOtp signs the user in, so go straight to their dashboard.
     setVerifying(false);
-    router.replace((role === 'scout' ? '/scout-dashboard' : '/player-dashboard') as any);
+    router.replace((actualRole === 'scout' ? '/scout-dashboard' : '/player-dashboard') as any);
   };
 
   const cancel = () => {
